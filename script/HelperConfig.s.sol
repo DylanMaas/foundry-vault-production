@@ -7,6 +7,8 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 contract HelperConfig is Script {
     struct NetworkConfig {
         address asset;
+        address aavePool;
+        address aToken;
         address owner;
         string name;
         string symbol;
@@ -24,12 +26,14 @@ contract HelperConfig is Script {
         }
     }
 
-    function getSepoliaConfig() public pure returns (NetworkConfig memory sepoliaConfig) {
+    function getSepoliaConfig() public view returns (NetworkConfig memory sepoliaConfig) {
         sepoliaConfig = NetworkConfig({
-            asset: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238, // USDC on Sepolia
+            asset: 0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8, // USDC on Sepolia
+            aavePool: 0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951,
+            aToken: 0x16dA4541aD1807f4443d92D26044C1147406EB80,
             name: "Production Vault",
             symbol: "pvUSDC",
-            owner: 0x26dd5cb257a4f3C4C54D1eE524A1664E7013B29F // Sepolia test address
+            owner: msg.sender
         });
     }
 
@@ -46,9 +50,11 @@ contract HelperConfig is Script {
 
         anvilNetworkConfig = NetworkConfig({
             asset: address(mockAsset),
+            aavePool: address(0), // no Aave on Anvil
+            aToken: address(0), // no Aave on Anvil
             name: "Production Vault",
             symbol: "pvUSDC",
-            owner: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 // first standard Anvil account
+            owner: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 // Anvil default address
         });
         return anvilNetworkConfig;
     }

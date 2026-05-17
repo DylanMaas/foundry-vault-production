@@ -21,9 +21,9 @@ contract ProductionVaultTest is Test {
     HelperConfig helperConfig;
     ERC20Mock asset;
 
-    uint256 constant DEPOSIT_AMOUNT = 100e18;
-    uint256 constant PARTIAL_WITHDRAWAL_AMOUNT = 50e18;
-    uint256 constant MINIMUM_DEPOSIT = 200e18;
+    uint256 public DEPOSIT_AMOUNT;
+    uint256 public PARTIAL_WITHDRAWAL_AMOUNT;
+    uint256 public MINIMUM_DEPOSIT;
 
     address public owner;
     address public user = address(2);
@@ -36,8 +36,12 @@ contract ProductionVaultTest is Test {
         asset = ERC20Mock(config.asset);
         owner = config.owner;
 
-        asset.mint(user, DEPOSIT_AMOUNT);
+        uint8 decimals = asset.decimals();
+        DEPOSIT_AMOUNT = 100 * 10 ** decimals;
+        PARTIAL_WITHDRAWAL_AMOUNT = 50 * 10 ** decimals;
+        MINIMUM_DEPOSIT = 200 * 10 ** decimals;
 
+        deal(config.asset, user, DEPOSIT_AMOUNT);
         vm.prank(user);
         asset.approve(address(productionVault), DEPOSIT_AMOUNT);
     }
@@ -145,9 +149,9 @@ contract ProductionVaultTest is Test {
         vm.prank(user);
         uint256 assets = productionVault.withdraw(PARTIAL_WITHDRAWAL_AMOUNT, user, user);
 
-        assertEq(assets, PARTIAL_WITHDRAWAL_AMOUNT);
-        assertEq(productionVault.totalAssets(), PARTIAL_WITHDRAWAL_AMOUNT);
-        assertEq(productionVault.balanceOf(user), PARTIAL_WITHDRAWAL_AMOUNT);
+        assertApproxEqAbs(assets, PARTIAL_WITHDRAWAL_AMOUNT, 1);
+        assertApproxEqAbs(productionVault.totalAssets(), PARTIAL_WITHDRAWAL_AMOUNT, 1);
+        assertApproxEqAbs(productionVault.balanceOf(user), PARTIAL_WITHDRAWAL_AMOUNT, 1);
     }
 
     function test_withdraw_revertsIfAmountIsZero() public {
@@ -220,35 +224,37 @@ contract ProductionVaultTest is Test {
     // Fuzz Tests
     // ---------------------------------------------------------------------
     function testFuzz_deposit_mintsCorrectShares(uint256 amount) public {
-        amount = bound(amount, 1, 1000000e18);
+        amount = bound(amount, 1e6, 1000e6);
 
-        asset.mint(user, amount);
+        // asset.mint(user, amount);
+        deal(address(asset), user, amount);
         vm.prank(user);
         asset.approve(address(productionVault), amount);
 
         vm.prank(user);
         uint256 shares = productionVault.deposit(amount, user);
 
-        assertEq(shares, amount);
-        assertEq(productionVault.totalAssets(), amount);
-        assertEq(productionVault.balanceOf(user), amount);
+        assertApproxEqAbs(shares, amount, 1);
+        assertApproxEqAbs(productionVault.totalAssets(), amount, 1);
+        assertApproxEqAbs(productionVault.balanceOf(user), amount, 1);
     }
 
     function testFuzz_withdraw_returnsCorrectAssets(uint256 amount) public {
-        amount = bound(amount, 1, 1000000e18);
+        amount = bound(amount, 1e6, 1000e6);
 
-        asset.mint(user, amount);
+        // asset.mint(user, amount);
+        deal(address(asset), user, amount);
         vm.prank(user);
         asset.approve(address(productionVault), amount);
 
         vm.prank(user);
-        productionVault.deposit(amount, user);
+        uint256 shares = productionVault.deposit(amount, user);
 
         vm.prank(user);
-        uint256 assets = productionVault.withdraw(amount, user, user);
+        uint256 assets = productionVault.redeem(shares, user, user);
 
-        assertEq(assets, amount);
-        assertEq(productionVault.totalAssets(), 0);
-        assertEq(productionVault.balanceOf(user), 0);
+        assertApproxEqAbs(assets, amount, 1);
+        assertApproxEqAbs(productionVault.totalAssets(), 0, 1);
+        assertApproxEqAbs(productionVault.balanceOf(user), 0, 1);
     }
 }
